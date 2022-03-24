@@ -1,2 +1,4 @@
 /ebin/
 /OTP 24.2.2/
+.gitignore
+.project
