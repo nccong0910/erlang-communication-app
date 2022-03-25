@@ -3,7 +3,7 @@
 
 -module(chat_client1).
 -behaviour(gen_server).
--export([start_link/0, connect/1, send_msg/3]).
+-export([start_link/0, connect_server/1, chat_register/0, send_msg/3]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -19,20 +19,22 @@ init({}) ->
     Return.
 
 % ===================================================================
-connect(Node) ->
-	Status = net_adm:ping(Node),
-	io:format("Status: ~p~n", [Status]),
-	case Status of
-		pong ->	io:format("Connecting...~n"),
-			io:format("node() ~p, self() ~p~n", [node(), self()]),
-			try
-				net_adm:ping(Node),
-				gen_server:call({global, chat_server}, {connect, node(), ?MODULE})
-			catch _:_ ->
-				gen_server:cast(?MODULE, {noconnect, Node})
-			end;
-		pang ->	gen_server:cast(?MODULE, {noconnect, Node})
-	end.
+connect_server(Node) ->
+    Status = net_adm:ping(Node),
+    io:format("Status: ~p~n", [Status]),
+    case Status of
+        pong -> {ok, connected};
+        pang -> gen_server:cast(?MODULE, {noconnect, Node})
+    end.
+
+chat_register() ->
+    io:format("Connecting...~n"),
+    case global:whereis_name(chat_server) of
+        undefined ->
+            {error, no_proc};
+        PID -> Value = gen_server:call(PID, {connect, node(), ?MODULE}),
+            {ok, Value}
+    end.
 
 send_msg(ToNode, ToClient, Msg) ->
 	gen_server:call({global, chat_server}, {send_msg, ?MODULE, ToNode, ToClient, Msg}).
@@ -77,4 +79,3 @@ code_change(_OldVsn, State, _Extra) ->
     Return = {ok, State},
     io:format("code_change: ~p~n", [Return]),
     Return.
-
