@@ -3,9 +3,13 @@
 
 -module(chat_client1).
 -behaviour(gen_server).
+
 -export([start_link/0, connect_server/1, chat_register/0, send_msg/3]).
+
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
+
+-record(users, {node, name}).
 
 start_link() ->
     Return = gen_server:start_link({local, ?MODULE}, ?MODULE, {}, []),
@@ -32,7 +36,7 @@ chat_register() ->
     case global:whereis_name(chat_server) of
         undefined ->
             {error, no_proc};
-        PID -> Value = gen_server:call(PID, {connect, node(), ?MODULE}),
+        PID -> Value = gen_server:call(PID, {connect, #users{node = node(), name = ?MODULE}}),
             {ok, Value}
     end.
 
@@ -79,3 +83,4 @@ code_change(_OldVsn, State, _Extra) ->
     Return = {ok, State},
     io:format("code_change: ~p~n", [Return]),
     Return.
+
